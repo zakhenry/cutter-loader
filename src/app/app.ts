@@ -1,16 +1,28 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import {Component} from '@angular/core';
+import {Loader} from "./loader/loader";
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [
+    Loader
+  ],
   template: `
-    <h1>Welcome to {{ title() }}!</h1>
-
-    <router-outlet />
+    <app-loader></app-loader>
   `,
-  styles: [],
+  styles: `
+    :host {
+      display: grid;
+      grid-template-areas: ". . ." ". loader ." ". . .";
+      grid-template-rows: 1fr 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+
+    app-loader {
+      grid-area: loader;
+      box-shadow: hsla(0, 0%, 30%, 0.2) 0px 8px 24px;
+    }
+  `,
 })
 export class App {
-  protected readonly title = signal('cutting-loader');
 }
