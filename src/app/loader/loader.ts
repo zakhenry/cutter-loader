@@ -46,23 +46,18 @@ export class Loader {
         })
 
         const rotatedPoints = Array.from({length: sides + 1}).map((_, keyframeIndex) => {
-            return Array.from({length: sides}).flatMap((_, sideIndex) => {
-                const offsetA = (keyframeIndex + sideIndex) % sides;
+            return Array.from({length: sides}).map((_, sideIndex) => {
+                const offsetA = (sides + keyframeIndex - sideIndex) % sides;
+
+                const firstPoint = offsetA === sides - 1 ? allPoints[0][sideIndex] : allPoints[offsetA][sideIndex];
+
                 // duplicate vertex
-                return [allPoints[offsetA][sideIndex], allPoints[offsetA][sideIndex]]
+                return [
+                    firstPoint,
+                    allPoints[offsetA][sideIndex],
+                ]
             })
         });
-
-        //
-        // const keyframeCount = allPoints.length;
-        // const rotatedPoints = Array.from({ length: keyframeCount }, () => Array(sides).fill(null));
-        //
-        // for (let col = 0; col < sides; col++) {
-        //     for (let row = 0; row < keyframeCount; row++) {
-        //         const newRow = (row + col) % keyframeCount;
-        //         rotatedPoints[row][col] = allPoints[newRow][col];
-        //     }
-        // }
 
         return {
             keyTimes: Array.from({length: sides + 1}).map((_, index) => index / sides).join("; "),
