@@ -11,7 +11,7 @@ import {Component} from '@angular/core';
             <polygon fill="green" [attr.points]="polyPoints2"></polygon>
             <polygon [attr.points]="polyPoints2"></polygon>
 
-            <polygon stroke="yellow" stroke-width="2" fill="none">
+            <polygon stroke="yellow" stroke-width="5" fill="none">
                 <animate attributeName="points"
                          dur="6s"
                          repeatCount="indefinite"
@@ -23,44 +23,50 @@ import {Component} from '@angular/core';
 })
 export class Loader {
 
-    sides = 4;
+    sides = 6;
 
     polyPoints = this.generatePolyPoints(this.sides, 500)
-    polyPoints2 = this.generatePolyPoints(this.sides, 300)
+    polyPoints2 = this.generatePolyPoints(this.sides, 400)
 
     generatePolyPoints(sides: number, radius: number) {
-        return Array.from({length: sides}).flatMap((_, index) => {
-
+        return Array.from({length: sides}).map((_, vert) => {
             // points are intentionally duplicated as they will animate independently at the cut edge
-            return [index, index + 1]
-                .map((vert) => {
-                    const theta = vert * (Math.PI * 2) / sides;
-                    return [
-                        (Math.cos(theta) * radius).toFixed(2),
-                        (Math.sin(theta) * radius).toFixed(2),
-                    ]
-                })
+            const theta = vert * (Math.PI * 2) / sides;
+            return [(Math.cos(theta) * radius).toFixed(2), (Math.sin(theta) * radius).toFixed(2),]
         })
     }
 
-    animation = this.generateAnimationFrames(this.sides, 600, 1000)
+    animation = this.generateAnimationFrames(this.sides, 800, 1000)
 
     generateAnimationFrames(sides: number, minDiameter: number, maxDiameter: number) {
 
         const allPoints = Array.from({length: sides + 1}).map((_, index) => {
-            const diameter = minDiameter + index * (maxDiameter - minDiameter) / (sides);
-            return this.generatePolyPoints(sides, diameter/2)
+            const diameter = minDiameter + index * (maxDiameter - minDiameter) / (sides-1);
+            return this.generatePolyPoints(sides, diameter / 2)
         })
 
-        console.log(`al`, allPoints);
+        const rotatedPoints = Array.from({length: sides + 1}).map((_, keyframeIndex) => {
+            return Array.from({length: sides}).flatMap((_, sideIndex) => {
+                const offsetA = (keyframeIndex + sideIndex) % sides;
+                // duplicate vertex
+                return [allPoints[offsetA][sideIndex], allPoints[offsetA][sideIndex]]
+            })
+        });
 
-        // const inner = this.generatePolyPoints(sides, minDiameter/2);
-        // const outer = this.generatePolyPoints(sides, maxDiameter/2);
-
+        //
+        // const keyframeCount = allPoints.length;
+        // const rotatedPoints = Array.from({ length: keyframeCount }, () => Array(sides).fill(null));
+        //
+        // for (let col = 0; col < sides; col++) {
+        //     for (let row = 0; row < keyframeCount; row++) {
+        //         const newRow = (row + col) % keyframeCount;
+        //         rotatedPoints[row][col] = allPoints[newRow][col];
+        //     }
+        // }
 
         return {
             keyTimes: Array.from({length: sides + 1}).map((_, index) => index / sides).join("; "),
-            values: allPoints.join(';\n')
+            values: rotatedPoints.join(';\n')
         }
 
     }
