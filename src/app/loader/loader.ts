@@ -3,28 +3,27 @@ import {Component} from '@angular/core';
 @Component({
     selector: 'app-loader', imports: [], template: `
         <svg
-                xmlns:svg="http://www.w3.org/1999/html"
                 viewBox="-500 -500 1000 1000"
         >
 
-<!--            <polygon fill="red" [attr.points]="polyPoints"></polygon>-->
-<!--            <polygon fill="green" [attr.points]="polyPoints2"></polygon>-->
-<!--            <polygon [attr.points]="polyPoints2"></polygon>-->
+            <!--            <polygon fill="red" [attr.points]="polyPoints"></polygon>-->
+            <!--            <polygon fill="green" [attr.points]="polyPoints2"></polygon>-->
+            <!--            <polygon [attr.points]="polyPoints2"></polygon>-->
 
             <mask id="cutter-mask">
-                <rect x="-500" y="-500" width="100%" height="100%" fill="white" />
+                <rect x="-500" y="-500" width="100%" height="100%" fill="white"/>
                 <g>
-                    <circle [attr.r]="cutterDiameter/2"  fill="black"></circle>
+                    <circle [attr.r]="cutterDiameter/2" fill="black"></circle>
                     <rect [attr.height]="cutterDiameter" [attr.y]="-cutterDiameter/2" width="100%"></rect>
                     <animateMotion
                             [attr.dur]="duration"
                             repeatCount="indefinite"
                             rotate="auto-reverse"
-                            [attr.path]="cutterPath" />
-                    
+                            [attr.path]="cutterPath"/>
+
                 </g>
             </mask>
-            
+
             <polygon fill="yellow" mask="url(#cutter-mask)">
                 <animate attributeName="points"
                          [attr.dur]="duration"
@@ -33,15 +32,15 @@ import {Component} from '@angular/core';
                          [attr.values]="animation.values"/>
             </polygon>
 
-<!--            <path stroke="white" stroke-width="4" fill="none" [attr.d]="cutterPath" />-->
+            <!--            <path stroke="white" stroke-width="4" fill="none" [attr.d]="cutterPath" />-->
 
-            <circle [attr.r]="cutterDiameter/2" stroke="blue" stroke-width="5" fill="none">
-                <animateMotion
-                        [attr.dur]="duration"
-                        repeatCount="indefinite"
-                        calcMode="linear"
-                        [attr.path]="cutterPath" />
-            </circle>
+            <!--            <circle [attr.r]="cutterDiameter/2" stroke="blue" stroke-width="5" fill="none">-->
+            <!--                <animateMotion-->
+            <!--                        [attr.dur]="duration"-->
+            <!--                        repeatCount="indefinite"-->
+            <!--                        calcMode="linear"-->
+            <!--                        [attr.path]="cutterPath" />-->
+            <!--            </circle>-->
         </svg>
     `, styles: ``
 })
@@ -126,9 +125,12 @@ export class Loader {
             const rotated = Array.from({length: sides}).map((_, sideIndex) => {
                 const rotatedOffset = (sides + keyframeIndex - sideIndex - 1) % sides;
 
-                const targetPoint = allPoints[rotatedOffset][sideIndex];
+                const targetPoint = rotatedOffset === 0 ? allPoints.at(-1)![sideIndex]: allPoints[rotatedOffset][sideIndex];
 
-                return [targetPoint, targetPoint];
+                return [
+                    allPoints[rotatedOffset][sideIndex],
+                    targetPoint,
+                ];
             });
 
             const rotatedOffset = Array.from({length: sides}).map((_, sideIndex) => {
