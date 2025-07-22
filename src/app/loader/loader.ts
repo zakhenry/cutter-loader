@@ -3,50 +3,73 @@ import {Component} from '@angular/core';
 @Component({
     selector: 'app-loader', imports: [], template: `
         <svg
+                xmlns="http://www.w3.org/2000/svg"
                 viewBox="-500 -500 1000 1000"
         >
 
-            <!--            <polygon fill="red" [attr.points]="polyPoints"></polygon>-->
-            <!--            <polygon fill="green" [attr.points]="polyPoints2"></polygon>-->
-            <!--            <polygon [attr.points]="polyPoints2"></polygon>-->
+            <g id="animation">
 
-            <mask id="cutter-mask">
-                <rect x="-500" y="-500" width="100%" height="100%" fill="white"/>
-                <g>
-                    <circle [attr.r]="cutterDiameter/2" fill="black"></circle>
-                    <rect [attr.height]="cutterDiameter" [attr.y]="-cutterDiameter/2" width="100%"></rect>
+                <animateTransform
+                        attributeName="transform"
+                        attributeType="XML"
+                        type="rotate"
+                        from="0 0 0"
+                        to="-360 0 0"
+                        [attr.dur]="duration * 2"
+                        repeatCount="indefinite" />
+            
+                <defs>
+                    <g id="cutter-raw">
+                        <circle [attr.r]="cutterDiameter/2" fill="black"></circle>
+                        <rect [attr.height]="cutterDiameter" [attr.y]="-cutterDiameter/2" width="100%"></rect>
+                        <animateMotion
+                                [attr.dur]="duration"
+                                repeatCount="indefinite"
+                                rotate="auto-reverse"
+                                [attr.path]="cutterPath"/>
+    
+                    </g>
+    
+                    <mask id="cutter-mask">
+                        <rect x="-500" y="-500" width="1000" height="1000" fill="white"/>
+                        <use href="#cutter-raw"/>
+                    </mask>
+    
+                    <filter id="stroke-sim" filterUnits="userSpaceOnUse" x="-500" y="-500" width="1000" height="1000">
+                        <feMorphology in="SourceAlpha" operator="dilate" radius="4" result="dilated"/>
+                        <feComposite in="dilated" in2="SourceAlpha" operator="xor" result="outline"/>
+                        <feFlood flood-color="white" result="strokeFill"/>
+                        <feComposite in="strokeFill" in2="outline" operator="in"/>
+                    </filter>
+                </defs>
+    
+                <g filter="url(#stroke-sim)">
+                    <polygon mask="url(#cutter-mask)"
+                    >
+                        <animate attributeName="points"
+                                 [attr.dur]="duration"
+                                 repeatCount="indefinite"
+                                 [attr.keyTimes]="animation.keyTimes"
+                                 [attr.values]="animation.values"/>
+                    </polygon>
+                </g>
+    
+<!--                <path stroke="grey" stroke-width="4" fill="none" [attr.d]="cutterPath" />-->
+    
+                <circle [attr.r]="cutterDiameter/2 - 2" stroke="white" stroke-width="4" fill="none">
                     <animateMotion
                             [attr.dur]="duration"
                             repeatCount="indefinite"
-                            rotate="auto-reverse"
-                            [attr.path]="cutterPath"/>
-
-                </g>
-            </mask>
-
-            <polygon fill="yellow" mask="url(#cutter-mask)">
-                <animate attributeName="points"
-                         [attr.dur]="duration"
-                         repeatCount="indefinite"
-                         [attr.keyTimes]="animation.keyTimes"
-                         [attr.values]="animation.values"/>
-            </polygon>
-
-            <!--            <path stroke="white" stroke-width="4" fill="none" [attr.d]="cutterPath" />-->
-
-            <!--            <circle [attr.r]="cutterDiameter/2" stroke="blue" stroke-width="5" fill="none">-->
-            <!--                <animateMotion-->
-            <!--                        [attr.dur]="duration"-->
-            <!--                        repeatCount="indefinite"-->
-            <!--                        calcMode="linear"-->
-            <!--                        [attr.path]="cutterPath" />-->
-            <!--            </circle>-->
+                            calcMode="linear"
+                            [attr.path]="cutterPath" />
+                </circle>
+            </g>
         </svg>
     `, styles: ``
 })
 export class Loader {
 
-    sides = 6
+    sides = 5
     duration = 6
 
     generatePolyPoints(sides: number, radius: number) {
@@ -96,17 +119,19 @@ export class Loader {
         return d + 'Z';
     }
 
-    minDiameter = 600;
-    maxDiameter = 800;
+    stepoverPercent = 50; // @todo this can't be anything other than 50 due to a bug.
+    cutterDiameter = 200;
+    stepover = this.cutterDiameter * (this.stepoverPercent / 100);
 
-    animation = this.generateAnimationFrames(this.sides, this.minDiameter, this.maxDiameter);
+    targetDiameter = 600;
+    stockDiameter = this.targetDiameter + (2 * this.stepover) / Math.cos(Math.PI / this.sides);
 
-    stepover = 0.3;
-    cutterDiameter = 150;
-    cutterPath = this.generateOffsetPolyLine(this.sides, this.minDiameter/2, this.cutterDiameter/2);
+    animation = this.generateAnimationFrames(this.sides, this.targetDiameter, this.stockDiameter);
 
-    polyPoints = this.generatePolyPoints(this.sides, this.maxDiameter/2)
-    polyPoints2 = this.generatePolyPoints(this.sides, this.minDiameter/2)
+    cutterPath = this.generateOffsetPolyLine(this.sides, this.targetDiameter/2, this.stepover);
+
+    // polyPoints = this.generatePolyPoints(this.sides, this.maxDiameter/2)
+    // polyPoints2 = this.generatePolyPoints(this.sides, this.minDiameter/2)
 
     generateAnimationFrames(sides: number, minDiameter: number, maxDiameter: number) {
 
@@ -114,12 +139,6 @@ export class Loader {
             const diameter = minDiameter + (index % sides) * (maxDiameter - minDiameter) / (sides-1);
             return this.generatePolyPoints(sides, diameter / 2)
         })
-
-        console.log(`allPoints`, allPoints);
-
-        for(let i=0; i<allPoints.length;i++) {
-            console.log(`allPoints[${i}]`, JSON.stringify(allPoints[i][0]));
-        }
 
         const rotatedPoints = Array.from({length: sides + 1}).flatMap((_, keyframeIndex) => {
             const rotated = Array.from({length: sides}).map((_, sideIndex) => {
@@ -147,19 +166,12 @@ export class Loader {
             return [rotated, rotatedOffset]
         });
 
-        // for(let i=0; i<rotatedPoints.length;i++) {
-        //     console.log(`rot`, JSON.stringify(rotatedPoints[i][0]));
-        // }
-
-        console.log(`rotatedPoints.length`, rotatedPoints.length);
 
         const keyTimes = Array.from({length: sides }).flatMap((_, index) => [index / sides, index / sides]).join("; ") + '; 1; 1';
-        console.log(`keytimes`, keyTimes);
 
         return {
             keyTimes,
             values: rotatedPoints.join(';\n')
-            // values: allPoints.join(';\n')
         }
 
     }
