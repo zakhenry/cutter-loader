@@ -11,8 +11,21 @@ import {Component} from '@angular/core';
 <!--            <polygon fill="green" [attr.points]="polyPoints2"></polygon>-->
 <!--            <polygon [attr.points]="polyPoints2"></polygon>-->
 
+            <mask id="cutter-mask">
+                <rect x="-500" y="-500" width="100%" height="100%" fill="white" />
+                <g>
+                    <circle [attr.r]="cutterDiameter/2"  fill="black"></circle>
+                    <rect [attr.height]="cutterDiameter" [attr.y]="-cutterDiameter/2" width="100%"></rect>
+                    <animateMotion
+                            dur="6s"
+                            repeatCount="indefinite"
+                            rotate="auto-reverse"
+                            [attr.path]="cutterPath" />
+                    
+                </g>
+            </mask>
             
-            <polygon stroke="yellow" stroke-width="5" fill="none">
+            <polygon fill="yellow" mask="url(#cutter-mask)">
                 <animate attributeName="points"
                          dur="6s"
                          repeatCount="indefinite"
@@ -22,7 +35,7 @@ import {Component} from '@angular/core';
 
             <path stroke="white" stroke-width="4" fill="none" [attr.d]="cutterPath" />
 
-            <circle [attr.r]="cutterDiameter" stroke="blue" stroke-width="5" fill="none">
+            <circle [attr.r]="cutterDiameter/2" stroke="blue" stroke-width="5" fill="none">
                 <animateMotion
                         dur="6s"
                         repeatCount="indefinite"
@@ -33,7 +46,7 @@ import {Component} from '@angular/core';
 })
 export class Loader {
 
-    sides = 6;
+    sides = 6
 
     generatePolyPoints(sides: number, radius: number) {
         return Array.from({length: sides}).map((_, vert) => {
@@ -44,51 +57,42 @@ export class Loader {
     }
 
     generateOffsetPolyLine(sides: number, radius: number, offset: number): string {
-        /** ---- 1  original vertices on the circum-circle ---- */
-        const vertices = Array.from({ length: sides }).map((_, i) => {
-            const θ = (2 * Math.PI * i) / sides;
-            return { x: Math.cos(θ) * radius, y: Math.sin(θ) * radius };
+
+        const points = Array.from({ length: sides }, (_, i) => {
+            const theta = (2 * Math.PI * i) / sides;
+            return { x: Math.cos(theta), y: Math.sin(theta) };
         });
 
-        /** ---- 2  unit outward normals for each edge ---- */
-        const normals = vertices.map((v, i) => {
-            const n = (i + 1) % sides;
-            const dir = {
-                x: vertices[n].x - v.x,
-                y: vertices[n].y - v.y,
-            };
-            const len = Math.hypot(dir.x, dir.y);
-            // CCW polygon  ⟹  outward normal = 90° CW rotation (dy, −dx)
-            return { x: dir.y / len, y: -dir.x / len };
+        const vertices = points.map(p => ({ x: p.x * radius, y: p.y * radius }));
+        const normals = points.map((_, i) => {
+            const a = vertices[i];
+            const b = vertices[(i + 1) % sides];
+            const dx = b.x - a.x, dy = b.y - a.y;
+            const len = Math.hypot(dx, dy);
+            return { x: dy / len, y: -dx / len }; // outward normal
         });
 
-        /** ---- 3  helper to build incoming / outgoing points ---- */
-        const incoming = (i: number) => ({
-            x: vertices[i].x + normals[(i - 1 + sides) % sides].x * offset,
-            y: vertices[i].y + normals[(i - 1 + sides) % sides].y * offset,
-        });
-        const outgoing = (i: number) => ({
-            x: vertices[i].x + normals[i].x * offset,
-            y: vertices[i].y + normals[i].y * offset,
-        });
+        const moveTo = (p: { x: number, y: number }) => `M ${p.x.toFixed(2)} ${p.y.toFixed(2)} `;
+        const lineTo = (p: { x: number, y: number }) => `L ${p.x.toFixed(2)} ${p.y.toFixed(2)} `;
+        const arcTo = (p: { x: number, y: number }) => `A ${offset} ${offset} 0 0 1 ${p.x.toFixed(2)} ${p.y.toFixed(2)} `;
 
-        /** ---- 4  assemble the path ---- */
-        let d = '';
-        const p0 = incoming(0);
-        d += `M ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} `;
+        let d = moveTo({
+            x: vertices[0].x + normals[sides - 1].x * offset,
+            y: vertices[0].y + normals[sides - 1].y * offset,
+        });
 
         for (let i = 0; i < sides; i++) {
-            const out = outgoing(i);
-            // small-arc-flag = 0  (all vertex arcs < 180°)
-            // sweep-flag      = 1  (clockwise in screen coords)
-            d += `A ${offset} ${offset} 0 0 1 ${out.x.toFixed(2)} ${out.y.toFixed(2)} `;
+            const v = vertices[i];
+            const n1 = normals[i];
 
-            // straight segment to next vertex’s incoming point
-            const nextInc = incoming((i + 1) % sides);
-            d += `L ${nextInc.x.toFixed(2)} ${nextInc.y.toFixed(2)} `;
+            const out = { x: v.x + n1.x * offset, y: v.y + n1.y * offset };
+            const inc = { x: vertices[(i + 1) % sides].x + n1.x * offset, y: vertices[(i + 1) % sides].y + n1.y * offset };
+
+            d += arcTo(out);
+            d += lineTo(inc);
         }
 
-        return d + 'Z'; // close path
+        return d + 'Z';
     }
 
     minDiameter = 600;
@@ -97,8 +101,8 @@ export class Loader {
     animation = this.generateAnimationFrames(this.sides, this.minDiameter, this.maxDiameter);
 
     stepover = 0.3;
-    cutterDiameter = 80;
-    cutterPath = this.generateOffsetPolyLine(this.sides, this.minDiameter/2, this.cutterDiameter);
+    cutterDiameter = 150;
+    cutterPath = this.generateOffsetPolyLine(this.sides, this.minDiameter/2, this.cutterDiameter/2);
 
     polyPoints = this.generatePolyPoints(this.sides, this.maxDiameter/2)
     polyPoints2 = this.generatePolyPoints(this.sides, this.minDiameter/2)
@@ -112,9 +116,9 @@ export class Loader {
 
         const rotatedPoints = Array.from({length: sides + 1}).map((_, keyframeIndex) => {
             return Array.from({length: sides}).map((_, sideIndex) => {
-                const offsetA = (sides + keyframeIndex - sideIndex) % sides;
+                const offsetA = (sides + keyframeIndex - sideIndex - 1) % sides;
 
-                const firstPoint = offsetA === sides - 1 ? allPoints[0][sideIndex] : allPoints[offsetA][sideIndex];
+                const firstPoint = /*offsetA === sides - 1 ? allPoints[0][sideIndex] : */allPoints[offsetA][sideIndex];
 
                 // duplicate vertex
                 return [
