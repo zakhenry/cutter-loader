@@ -17,7 +17,7 @@ import {Component} from '@angular/core';
                     <circle [attr.r]="cutterDiameter/2"  fill="black"></circle>
                     <rect [attr.height]="cutterDiameter" [attr.y]="-cutterDiameter/2" width="100%"></rect>
                     <animateMotion
-                            dur="6s"
+                            [attr.dur]="duration"
                             repeatCount="indefinite"
                             rotate="auto-reverse"
                             [attr.path]="cutterPath" />
@@ -27,18 +27,19 @@ import {Component} from '@angular/core';
             
             <polygon fill="yellow" mask="url(#cutter-mask)">
                 <animate attributeName="points"
-                         dur="6s"
+                         [attr.dur]="duration"
                          repeatCount="indefinite"
                          [attr.keyTimes]="animation.keyTimes"
                          [attr.values]="animation.values"/>
             </polygon>
 
-            <path stroke="white" stroke-width="4" fill="none" [attr.d]="cutterPath" />
+<!--            <path stroke="white" stroke-width="4" fill="none" [attr.d]="cutterPath" />-->
 
             <circle [attr.r]="cutterDiameter/2" stroke="blue" stroke-width="5" fill="none">
                 <animateMotion
-                        dur="6s"
+                        [attr.dur]="duration"
                         repeatCount="indefinite"
+                        calcMode="linear"
                         [attr.path]="cutterPath" />
             </circle>
         </svg>
@@ -47,6 +48,7 @@ import {Component} from '@angular/core';
 export class Loader {
 
     sides = 6
+    duration = 6
 
     generatePolyPoints(sides: number, radius: number) {
         return Array.from({length: sides}).map((_, vert) => {
@@ -109,28 +111,53 @@ export class Loader {
 
     generateAnimationFrames(sides: number, minDiameter: number, maxDiameter: number) {
 
-        const allPoints = Array.from({length: sides + 1}).map((_, index) => {
-            const diameter = minDiameter + index * (maxDiameter - minDiameter) / (sides-1);
+        const allPoints = Array.from({length: sides}).map((_, index) => {
+            const diameter = minDiameter + (index % sides) * (maxDiameter - minDiameter) / (sides-1);
             return this.generatePolyPoints(sides, diameter / 2)
         })
 
-        const rotatedPoints = Array.from({length: sides + 1}).map((_, keyframeIndex) => {
-            return Array.from({length: sides}).map((_, sideIndex) => {
-                const offsetA = (sides + keyframeIndex - sideIndex - 1) % sides;
+        console.log(`allPoints`, allPoints);
 
-                const firstPoint = /*offsetA === sides - 1 ? allPoints[0][sideIndex] : */allPoints[offsetA][sideIndex];
+        for(let i=0; i<allPoints.length;i++) {
+            console.log(`allPoints[${i}]`, JSON.stringify(allPoints[i][0]));
+        }
 
-                // duplicate vertex
+        const rotatedPoints = Array.from({length: sides + 1}).flatMap((_, keyframeIndex) => {
+            const rotated = Array.from({length: sides}).map((_, sideIndex) => {
+                const rotatedOffset = (sides + keyframeIndex - sideIndex - 1) % sides;
+
+                const targetPoint = allPoints[rotatedOffset][sideIndex];
+
+                return [targetPoint, targetPoint];
+            });
+
+            const rotatedOffset = Array.from({length: sides}).map((_, sideIndex) => {
+                const rotatedOffset = (sides + keyframeIndex - sideIndex - 1) % sides;
+
+                const targetPoint = rotatedOffset === sides - 1 ? allPoints.at(0)![sideIndex]: allPoints[rotatedOffset][sideIndex];
+
                 return [
-                    firstPoint,
-                    allPoints[offsetA][sideIndex],
-                ]
-            })
+                    targetPoint,
+                    allPoints[rotatedOffset][sideIndex],
+                ];
+            });
+
+            return [rotated, rotatedOffset]
         });
 
+        // for(let i=0; i<rotatedPoints.length;i++) {
+        //     console.log(`rot`, JSON.stringify(rotatedPoints[i][0]));
+        // }
+
+        console.log(`rotatedPoints.length`, rotatedPoints.length);
+
+        const keyTimes = Array.from({length: sides }).flatMap((_, index) => [index / sides, index / sides]).join("; ") + '; 1; 1';
+        console.log(`keytimes`, keyTimes);
+
         return {
-            keyTimes: Array.from({length: sides + 1}).map((_, index) => index / sides).join("; "),
+            keyTimes,
             values: rotatedPoints.join(';\n')
+            // values: allPoints.join(';\n')
         }
 
     }
