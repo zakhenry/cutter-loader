@@ -5,13 +5,13 @@ import {Component} from '@angular/core';
         <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="-500 -500 1000 1000"
+                transform="rotate(-90 0 0)"
         >
 
             <g id="animation">
 
                 <animateTransform
                         attributeName="transform"
-                        attributeType="XML"
                         type="rotate"
                         from="0 0 0"
                         to="-360 0 0"
@@ -54,7 +54,11 @@ import {Component} from '@angular/core';
                     </polygon>
                 </g>
     
+                
 <!--                <path stroke="grey" stroke-width="4" fill="none" [attr.d]="cutterPath" />-->
+<!--                <circle [attr.r]="stockDiameter/2" stroke="yellow" stroke-width="4" fill="none"></circle>-->
+<!--                <circle [attr.r]="targetDiameter/2" stroke="green" stroke-width="4" fill="none"></circle>-->
+                
     
                 <circle [attr.r]="cutterDiameter/2 - 2" stroke="white" stroke-width="4" fill="none">
                     <animateMotion
@@ -70,7 +74,13 @@ import {Component} from '@angular/core';
 export class Loader {
 
     sides = 5
-    duration = 6
+    duration = 5
+    stepoverPercent = 30; // note this must be less than 50% due to how the masking currently works
+    cutterDiameter = 200;
+    stepover = this.cutterDiameter * (this.stepoverPercent / 100);
+
+    targetDiameter = 500;
+    stockDiameter = this.targetDiameter + (2 * this.stepover) / Math.cos(Math.PI / this.sides);
 
     generatePolyPoints(sides: number, radius: number) {
         return Array.from({length: sides}).map((_, vert) => {
@@ -119,16 +129,10 @@ export class Loader {
         return d + 'Z';
     }
 
-    stepoverPercent = 50; // @todo this can't be anything other than 50 due to a bug.
-    cutterDiameter = 200;
-    stepover = this.cutterDiameter * (this.stepoverPercent / 100);
-
-    targetDiameter = 600;
-    stockDiameter = this.targetDiameter + (2 * this.stepover) / Math.cos(Math.PI / this.sides);
 
     animation = this.generateAnimationFrames(this.sides, this.targetDiameter, this.stockDiameter);
 
-    cutterPath = this.generateOffsetPolyLine(this.sides, this.targetDiameter/2, this.stepover);
+    cutterPath = this.generateOffsetPolyLine(this.sides, this.targetDiameter/2, this.cutterDiameter/2);
 
     // polyPoints = this.generatePolyPoints(this.sides, this.maxDiameter/2)
     // polyPoints2 = this.generatePolyPoints(this.sides, this.minDiameter/2)

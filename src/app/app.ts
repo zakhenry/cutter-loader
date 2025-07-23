@@ -11,6 +11,7 @@ import { Loader } from "./loader/loader";
       grid-template-areas: ". . ." ". loader ." ". . .";
       grid-template-rows: 1fr 1fr 1fr;
       grid-template-columns: 1fr 1fr 1fr;
+      height: 100vh;
     }
 
     app-loader {
