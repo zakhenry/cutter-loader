@@ -1,0 +1,32 @@
+name: Deploy Angular App to GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack (for Yarn)
+        run: corepack enable
+
+      - name: Install dependencies with Yarn
+        run: yarn install --frozen-lockfile
+
+      - name: Build Angular app
+        run: yarn build --configuration production --base-href "/cutting-loader/"
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist/cutting-loader
