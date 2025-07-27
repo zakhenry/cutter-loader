@@ -39,10 +39,18 @@ import {ReactiveFormsModule} from "@angular/forms";
   styles: `
     :host {
       display: grid;
-      grid-template-areas: "settings . ." ". loader ." ". . .";
-      grid-template-rows: 1fr 1fr 1fr;
-      grid-template-columns: 1fr 1fr 1fr;
       height: 100vh;
+      grid-template-columns: 50vh;
+      grid-template-areas: "loader" "settings";
+      justify-content: center;
+    }
+    
+    @media (min-width: 1200px) {
+      :host {
+        grid-template-areas: "settings . ." ". loader ." ". . .";
+        grid-template-rows: 1fr 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
+      }
     }
 
     app-loader {
