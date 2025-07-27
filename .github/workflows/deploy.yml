@@ -25,7 +25,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Build Angular app
-        run: yarn build --configuration production --base-href "/cutting-loader/"
+        run: yarn build --configuration production --base-href "/cutter-loader/"
 
       - name: Upload static files as artifact
         id: deployment
