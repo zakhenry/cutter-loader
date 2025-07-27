@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, computed, input, signal} from '@angular/core';
 
 @Component({
     selector: 'app-loader',
@@ -17,57 +17,59 @@ import {Component} from '@angular/core';
                         type="rotate"
                         from="0 0 0"
                         to="-360 0 0"
-                        [attr.dur]="duration * 2"
-                        repeatCount="indefinite" />
-            
+                        [attr.dur]="spinDuration()"
+                        repeatCount="indefinite"/>
+
                 <defs>
                     <g id="cutter-raw">
-                        <circle [attr.r]="cutterDiameter/2" fill="black"></circle>
-                        <rect [attr.height]="cutterDiameter" [attr.y]="-cutterDiameter/2" width="100%"></rect>
+                        <circle [attr.r]="cutterDiameter()/2" fill="black"></circle>
+                        <rect [attr.height]="cutterDiameter()" [attr.y]="-cutterDiameter()/2" width="100%"></rect>
                         <animateMotion
-                                [attr.dur]="duration"
+                                [attr.dur]="cutterDuration()"
                                 repeatCount="indefinite"
                                 rotate="auto-reverse"
-                                [attr.path]="cutterPath"/>
-    
+                                [attr.path]="cutterPath()"/>
+
                     </g>
-    
+
                     <mask id="cutter-mask">
-                        <rect [attr.x]="-viewboxWidth/2" [attr.y]="-viewboxWidth/2" [attr.width]="viewboxWidth" [attr.height]="viewboxWidth" fill="white"/>
+                        <rect [attr.x]="-viewboxWidth/2" [attr.y]="-viewboxWidth/2" [attr.width]="viewboxWidth"
+                              [attr.height]="viewboxWidth" fill="white"/>
                         <use href="#cutter-raw"/>
                     </mask>
-    
-                    <filter id="stroke-sim" filterUnits="userSpaceOnUse" [attr.x]="-viewboxWidth/2" [attr.y]="-viewboxWidth/2" [attr.width]="viewboxWidth" [attr.height]="viewboxWidth">
+
+                    <filter id="stroke-sim" filterUnits="userSpaceOnUse" [attr.x]="-viewboxWidth/2"
+                            [attr.y]="-viewboxWidth/2" [attr.width]="viewboxWidth" [attr.height]="viewboxWidth">
                         <feMorphology in="SourceAlpha" operator="dilate" radius="4" result="dilated"/>
                         <feComposite in="dilated" in2="SourceAlpha" operator="xor" result="outline"/>
                         <feFlood flood-color="white" result="strokeFill"/>
                         <feComposite in="strokeFill" in2="outline" operator="in"/>
                     </filter>
                 </defs>
-    
+
                 <g filter="url(#stroke-sim)">
                     <polygon mask="url(#cutter-mask)"
                     >
                         <animate attributeName="points"
-                                 [attr.dur]="duration"
+                                 [attr.dur]="cutterDuration()"
                                  repeatCount="indefinite"
-                                 [attr.keyTimes]="animation.keyTimes"
-                                 [attr.values]="animation.values"/>
+                                 [attr.keyTimes]="animation().keyTimes"
+                                 [attr.values]="animation().values"/>
                     </polygon>
                 </g>
-    
-                
-<!--                <path stroke="grey" stroke-width="4" fill="none" [attr.d]="cutterPath" />-->
-<!--                <circle [attr.r]="stockDiameter/2" stroke="yellow" stroke-width="4" fill="none"></circle>-->
-<!--                <circle [attr.r]="targetDiameter/2" stroke="green" stroke-width="4" fill="none"></circle>-->
-                
-    
-                <circle [attr.r]="cutterDiameter/2 - 2" stroke="white" stroke-width="4" fill="none">
+
+
+                <!--                <path stroke="grey" stroke-width="4" fill="none" [attr.d]="cutterPath" />-->
+                <!--                <circle [attr.r]="stockDiameter/2" stroke="yellow" stroke-width="4" fill="none"></circle>-->
+                <!--                <circle [attr.r]="targetDiameter/2" stroke="green" stroke-width="4" fill="none"></circle>-->
+
+
+                <circle [attr.r]="cutterDiameter()/2 - 2" stroke="white" stroke-width="4" fill="none">
                     <animateMotion
-                            [attr.dur]="duration"
+                            [attr.dur]="cutterDuration()"
                             repeatCount="indefinite"
                             calcMode="linear"
-                            [attr.path]="cutterPath" />
+                            [attr.path]="cutterPath()"/>
                 </circle>
             </g>
         </svg>
@@ -78,18 +80,23 @@ export class Loader {
     viewboxWidth = 1000
 
     // inputs
-    sides = 5
-    duration = 5
-    stepoverPercent = 30; // note this must be less than 50% due to how the masking currently works
+    sides = input.required<number>()
+    cutterDuration = input.required<number>()
+    spinDuration = input.required<number>()
+    stepoverPercent = input.required<number, number>({
+        // note this must be less than 50% due to how the masking currently works
+        transform: v => Math.min(v, 50)}
+    );
+    cutterWorkpieceRatio = input.required<number>();
 
-    cutterDiameter = this.viewboxWidth / 5;
     targetDiameter = this.viewboxWidth / 2;
+    cutterDiameter = computed(() => this.targetDiameter / this.cutterWorkpieceRatio());
 
     // calculated values
-    stepover = this.cutterDiameter * (this.stepoverPercent / 100);
-    stockDiameter = this.targetDiameter + (2 * this.stepover) / Math.cos(Math.PI / this.sides);
-    animation = this.generateAnimationFrames(this.sides, this.targetDiameter, this.stockDiameter);
-    cutterPath = this.generateOffsetPolyLine(this.sides, this.targetDiameter/2, this.cutterDiameter/2);
+    stepover = computed(() => this.cutterDiameter() * (this.stepoverPercent() / 100));
+    stockDiameter = computed(() => this.targetDiameter + (2 * this.stepover()) / Math.cos(Math.PI / this.sides()));
+    animation = computed(() => this.generateAnimationFrames(this.sides(), this.targetDiameter, this.stockDiameter()));
+    cutterPath = computed(() => this.generateOffsetPolyLine(this.sides(), this.targetDiameter/2, this.cutterDiameter()/2));
 
     generatePolyPoints(sides: number, radius: number): number[][] {
         return Array.from({length: sides}).map((_, vert) => {
